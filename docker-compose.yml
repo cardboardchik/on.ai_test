@@ -1,0 +1,33 @@
+version: '3'
+services:
+  web:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=redis://redis:6379/0
+    command: >
+      sh -c "pytest --maxfail=1 --disable-warnings && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build: .
+    command: celery -A app.celery_worker.celery worker --loglevel=info
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+
